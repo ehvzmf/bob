@@ -72,7 +72,7 @@ function Home({ st, today, open }: { st: State; today: string; open: (s: Sheet) 
       <button className="main" onClick={() => open({ k: 'entry' })}>+ 내역 입력</button>
       <h2>오늘의 식사 제안</h2>
       <section className="suggestion-card">
-        <div className="row split"><p className="cap">{mealSuggestion.tier}한 예산</p><button className="ghost" onClick={() => setSeed((n) => n + 1)}>다른 추천</button></div>
+        <div className="row split"><p className="cap">{mealSuggestion.tier}한 예산</p><button className="icon-btn" aria-label="다른 추천" onClick={() => setSeed((n) => n + 1)}>↻</button></div>
         <p className="suggestion-msg">{mealSuggestion.message}</p>
         <p className="sub">추천 메뉴: {mealSuggestion.menu}</p>
       </section>
