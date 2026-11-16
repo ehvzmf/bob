@@ -93,7 +93,24 @@ public/guides/                  안내 이미지(paste-guide.png, image-guide.pn
 - 창립기념일 등 회사 휴일 날짜.
 - 안내 이미지(스크린샷) 파일. 카드번호와 이름은 가려서 받는다.
 
+## 커밋 컨벤션
+- 모든 커밋 메시지는 아래 형식을 따른다: `gitmoji type: commit message`
+- 형식 예시: `✨ feat: add daily spend calculation` 또는 `🐛 fix: correct leave-day logic`
+- `gitmoji`는 작업 성격에 맞는 이모지를 앞에 붙이고, 뒤에는 `type`을 소문자로 적는다.
+- 권장 `type`: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `build`, `ci`, `perf`
+- 메시지는 한국어 또는 영어를 섞어 써도 되지만, 의미가 명확하고 명령형으로 짧게 작성한다.
+- 브랜치/이슈 번호가 있으면 끝에 `(#123)`처럼 붙여도 된다.
+- 예시 목록:
+  - `✨ feat: add card import preview`
+  - `🐛 fix: correct remaining days calculation`
+  - `📝 docs: add commit convention for agents`
+  - `🎨 style: update blue theme palette`
+  - `♻️ refactor: simplify storage abstraction`
+  - `✅ test: add date logic regression checks`
+  - `🔧 chore: add app metadata`
+
 ## 작업 규칙
+```
 - 사용자는 한국어로 소통한다. UI 문구는 한국어, 짧은 "~요" 체, 문장 첫 글자 외 대문자 없음, 경고는 무엇이 문제인지와 해야 할 일을 함께. 영어 대문자 라벨이나 장식용 문구는 쓰지 않는다.
 - 모바일 우선(폰으로 사용). 변경 전에 어색하면 **화면 설계를 먼저 사용자와 맞춘다**(사용자가 목업 확인 후 구현하는 흐름을 선호했다).
 - 의존성은 최소로 유지한다. `crypto.randomUUID`는 http 환경(폰에서 내부 IP로 접속)에서 없을 수 있으니 `uid()`를 쓴다.
