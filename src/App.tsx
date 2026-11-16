@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { load, save } from './storage'
 import { GUIDES } from './config/guides'
+import { pickMealSuggestion } from './config/recommendations'
 import { applyImport, classify, fromYmd, holidayName, md, offReason, p2, parseCardText, planImport, remainingDays, toYmd, uid, won, WEEK } from './lib'
 import type { Entry, Leave, LeaveKind, PlanRow, State } from './lib'
 
@@ -52,6 +53,7 @@ function Home({ st, today, open }: { st: State; today: string; open: (s: Sheet) 
   const recent = st.entries.filter((e) => e.date.startsWith(month)).sort(byDate).slice(0, 4)
   const off = offReason(today, st.settings)
   const leaveAhead = st.leaves.filter((l) => l.date >= today && l.date.startsWith(month) && !l.useCard).length
+  const mealSuggestion = pickMealSuggestion(Math.max(per, 0))
   return (
     <>
       <h1 className="month">{Number(month.slice(5))}월 {off ? `· 오늘은 ${off}` : ''}</h1>
@@ -67,6 +69,12 @@ function Home({ st, today, open }: { st: State; today: string; open: (s: Sheet) 
         <button className="ghost" onClick={() => open({ k: 'card' })}>카드 금액 맞추기</button>
       </div>
       <button className="main" onClick={() => open({ k: 'entry' })}>+ 내역 입력</button>
+      <h2>오늘의 식사 제안</h2>
+      <section className="suggestion-card">
+        <p className="cap">{mealSuggestion.tier}한 예산</p>
+        <p className="suggestion-msg">{mealSuggestion.message}</p>
+        <p className="sub">추천 메뉴: {mealSuggestion.menu}</p>
+      </section>
       <h2>최근 내역</h2>
       {recent.length === 0 && <p className="empty">아직 내역이 없어요. 첫 내역을 입력해보세요.</p>}
       {recent.map((e) => <EntryRow key={e.id} e={e} onClick={() => open({ k: 'entry', id: e.id })} />)}
