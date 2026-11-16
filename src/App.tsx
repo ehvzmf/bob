@@ -53,7 +53,8 @@ function Home({ st, today, open }: { st: State; today: string; open: (s: Sheet) 
   const recent = st.entries.filter((e) => e.date.startsWith(month)).sort(byDate).slice(0, 4)
   const off = offReason(today, st.settings)
   const leaveAhead = st.leaves.filter((l) => l.date >= today && l.date.startsWith(month) && !l.useCard).length
-  const mealSuggestion = pickMealSuggestion(Math.max(per, 0))
+  const [seed, setSeed] = useState(0)
+  const mealSuggestion = pickMealSuggestion(Math.max(per, 0), st.entries, seed)
   return (
     <>
       <h1 className="month">{Number(month.slice(5))}월 {off ? `· 오늘은 ${off}` : ''}</h1>
@@ -71,7 +72,7 @@ function Home({ st, today, open }: { st: State; today: string; open: (s: Sheet) 
       <button className="main" onClick={() => open({ k: 'entry' })}>+ 내역 입력</button>
       <h2>오늘의 식사 제안</h2>
       <section className="suggestion-card">
-        <p className="cap">{mealSuggestion.tier}한 예산</p>
+        <div className="row split"><p className="cap">{mealSuggestion.tier}한 예산</p><button className="ghost" onClick={() => setSeed((n) => n + 1)}>다른 추천</button></div>
         <p className="suggestion-msg">{mealSuggestion.message}</p>
         <p className="sub">추천 메뉴: {mealSuggestion.menu}</p>
       </section>
