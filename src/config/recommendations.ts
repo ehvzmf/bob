@@ -7,6 +7,8 @@ export type BudgetTier = {
   menuPool: string[]
 }
 
+import type { Entry } from '../lib'
+
 export const budgetTiers: BudgetTier[] = [
   {
     id: 'tight',
@@ -79,15 +81,39 @@ export function resolveTier(amount: number): BudgetTier {
   return budgetTiers.find((tier) => amount >= tier.min && (tier.max === null || amount < tier.max)) ?? budgetTiers[budgetTiers.length - 1]
 }
 
-export function pickMealSuggestion(amount: number) {
+function recentPatterns(entries: Entry[]) {
+  const recent = [...entries].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30)
+  const cafeCount = recent.filter((e) => /카페|커피|coffee|cafe/i.test(e.merchant) || e.item === '음료').length
+  const heartyCount = recent.filter((e) => /덮밥|돈까스|제육|김밥|카레|브런치|파스타|정식|쌈밥/i.test(e.merchant) || e.item === '식대').length
+  return { recent, cafeCount, heartyCount }
+}
+
+export function pickMealSuggestion(amount: number, entries: Entry[] = [], seed = 0) {
   const tier = resolveTier(amount)
-  const message = tier.messagePool[Math.floor(Math.random() * tier.messagePool.length)]
-  const menu = tier.menuPool[Math.floor(Math.random() * tier.menuPool.length)]
+  const { cafeCount, heartyCount } = recentPatterns(entries)
+  const messagePool = [...tier.messagePool]
+  const menuPool = [...tier.menuPool]
+
+  if (cafeCount >= 3) {
+    messagePool.unshift('최근 커피·카페가 많아서, 오늘은 든든한 한 끼가 좋겠어요.')
+    menuPool.unshift('제육볶음', '김치찌개', '덮밥')
+  }
+  if (heartyCount >= 4) {
+    messagePool.unshift('최근 푸짐한 식사 위주라서, 오늘은 가볍게 정리해볼까요?')
+    menuPool.unshift('샐러드', '브런치', '김밥')
+  }
+  if (amount >= 25000 && tier.id !== 'luxury') {
+    messagePool.unshift('오늘은 한 끼를 제대로 즐길 수 있는 날이에요.')
+  }
+
+  const index = Math.abs((seed + Math.round(amount)) % messagePool.length)
+  const menuIndex = Math.abs((seed + Math.round(amount * 3)) % menuPool.length)
+
   return {
     title: fallbackMealSuggestion.title,
     summary: fallbackMealSuggestion.summary,
     tier: tier.label,
-    message,
-    menu,
+    message: messagePool[index],
+    menu: menuPool[menuIndex],
   }
 }
