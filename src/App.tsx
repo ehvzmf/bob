@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { buildExportWorkbook } from './export/fillTemplate'
+import { useEffect, useRef, useState } from 'react'
 import { load, save } from './storage'
 import { GUIDES } from './config/guides'
 import { pickMealSuggestion } from './config/recommendations'
@@ -94,15 +95,32 @@ function EntryRow({ e, onClick }: { e: Entry; onClick: () => void }) {
 
 function Ledger({ st, today, open }: { st: State; today: string; open: (s: Sheet) => void }) {
   const [month, setMonth] = useState(today.slice(0, 7))
+  const [templateFile, setTemplateFile] = useState<File | null>(null)
+  const fileRef = useRef<HTMLInputElement | null>(null)
   const shift = (n: number) => { const d = fromYmd(month + '-01'); d.setMonth(d.getMonth() + n); setMonth(toYmd(d).slice(0, 7)) }
   const list = st.entries.filter((e) => e.date.startsWith(month)).sort(byDate)
+  const exportTemplate = async () => {
+    if (!templateFile) {
+      alert('회사 양식 파일을 선택해 주세요. 비공개 파일이어야 합니다.')
+      return
+    }
+    try {
+      await buildExportWorkbook(list, templateFile, `corp-card-${month}.xlsx`)
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '내보내기 중 문제가 발생했어요.')
+    }
+  }
   return (
     <>
       <div className="row split"><button className="ghost" onClick={() => shift(-1)}>이전</button><h1 className="month">{month.replace('-', '년 ')}월</h1><button className="ghost" onClick={() => shift(1)}>다음</button></div>
       <p className="sub">{list.length}건 · 내역 합계 {won(sum(list))}</p>
       {list.length === 0 && <p className="empty">이 달에는 내역이 없어요.</p>}
       {list.map((e) => <EntryRow key={e.id} e={e} onClick={() => open({ k: 'entry', id: e.id })} />)}
-      <button className="main soft" onClick={() => alert('양식 엑셀 파일을 받은 뒤 추가돼요.')}>엑셀 내보내기 (준비 중)</button>
+      <div className="row split" style={{ marginTop: 12 }}>
+        <input ref={fileRef} type="file" accept=".xlsx,.xls" style={{ display: 'none' }} onChange={(e) => setTemplateFile(e.target.files?.[0] ?? null)} />
+        <button className="main soft" onClick={() => fileRef.current?.click()}>회사 양식 선택</button>
+        <button className="main" onClick={exportTemplate} disabled={!templateFile}>내보내기</button>
+      </div>
     </>
   )
 }
