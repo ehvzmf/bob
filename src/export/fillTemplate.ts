@@ -1,38 +1,43 @@
 import JSZip from 'jszip'
 import type { Entry } from '../lib'
 
-export async function buildExportWorkbook(entries: Entry[], file: File, filename = 'corp-card-export.xlsx') {
+export type ExportMeta = { month: string; submitterName: string; accountTitle: string }
+
+export async function buildExportWorkbook(entries: Entry[], file: File, meta: ExportMeta, filename = 'corp-card-export.xlsx') {
   const zip = await JSZip.loadAsync(await file.arrayBuffer())
   const sheet = zip.file('xl/worksheets/sheet1.xml')
   if (!sheet) throw new Error('템플릿 시트를 찾을 수 없어요.')
 
-  const xml = await sheet.async('string')
-  const start = xml.indexOf('<x:row r="5"')
-  const end = xml.indexOf('<x:row r="35"')
-  if (start < 0 || end < 0) throw new Error('템플릿 구조를 찾지 못했어요. 다른 양식 파일을 선택해 주세요.')
+  let xml = await sheet.async('string')
+  const [year, month] = meta.month.split('-').map(Number)
+  const monthName = `${month}월 법인카드 사용내역서`
+  const period = `기     간   :    ${year} / ${String(month).padStart(2, '0')} / 01  ~  ${year} / ${String(month).padStart(2, '0')} / ${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`
 
-  const rows = entries.slice(0, 30).map((entry, idx) => {
-    const rowNo = idx + 5
-    const seq = idx + 1
-    const dateValue = toExcelDateNumber(entry.date)
-    const merchant = escapeXml(entry.merchant || '직접 입력')
-    const item = escapeXml(entry.item || '식대')
-    const memo = escapeXml(entry.memo || '')
-    return [
-      `<x:row r="${rowNo}">`,
-      `<x:c r="B${rowNo}" s="6"><x:v>${seq}</x:v></x:c>`,
-      `<x:c r="C${rowNo}" s="7"><x:v>${dateValue}</x:v></x:c>`,
-      `<x:c r="D${rowNo}" s="8" t="inlineStr"><is><t>${merchant}</t></is></x:c>`,
-      `<x:c r="E${rowNo}" s="9"><x:v>${entry.amount}</x:v></x:c>`,
-      `<x:c r="F${rowNo}" s="10" t="inlineStr"><is><t>${item}</t></is></x:c>`,
-      `<x:c r="G${rowNo}" s="10" t="inlineStr"><is><t>${item}</t></is></x:c>`,
-      `<x:c r="H${rowNo}" s="11" t="inlineStr"><is><t>${memo}</t></is></x:c>`,
-      `</x:row>`,
-    ].join('')
-  }).join('')
+  xml = replaceInlineString(xml, 'B2', monthName, '25')
+  xml = replaceInlineString(xml, 'B3', meta.submitterName, '28')
+  xml = replaceInlineString(xml, 'E3', period, '30')
 
-  const updated = xml.slice(0, start) + rows + xml.slice(end)
-  zip.file('xl/worksheets/sheet1.xml', updated)
+  const sorted = entries.slice().sort((a, b) => a.date.localeCompare(b.date)).slice(0, 30)
+  for (let rowNo = 5; rowNo <= 34; rowNo++) {
+    const entry = sorted[rowNo - 5]
+    xml = replaceRowValue(xml, rowNo, 'B', entry ? String(rowNo - 4) : '')
+    xml = replaceRowValue(xml, rowNo, 'C', entry ? toExcelDateNumber(entry.date).toString() : '')
+    xml = replaceInlineRowValue(xml, rowNo, 'D', entry?.merchant || '직접 입력')
+    xml = replaceRowValue(xml, rowNo, 'E', entry ? String(entry.amount) : '')
+    xml = replaceInlineRowValue(xml, rowNo, 'F', entry?.item || '')
+    xml = replaceInlineRowValue(xml, rowNo, 'G', entry ? meta.accountTitle : '')
+    xml = replaceInlineRowValue(xml, rowNo, 'H', '')
+    xml = replaceInlineRowValue(xml, rowNo, 'I', entry?.memo || '')
+  }
+
+  zip.file('xl/worksheets/sheet1.xml', xml)
+  const workbook = zip.file('xl/workbook.xml')
+  if (workbook) {
+    let workbookXml = await workbook.async('string')
+    workbookXml = workbookXml.replace(/<x:sheet name="[^"]*"/, `<x:sheet name="${meta.month.replace('-', '')}"`)
+    workbookXml = workbookXml.replace(/<x:calcPr([^>]*)>/, '<x:calcPr$1 fullCalcOnLoad="1"/>')
+    zip.file('xl/workbook.xml', workbookXml)
+  }
 
   const blob = await zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
   const url = URL.createObjectURL(blob)
@@ -45,16 +50,46 @@ export async function buildExportWorkbook(entries: Entry[], file: File, filename
   URL.revokeObjectURL(url)
 }
 
+function replaceInlineString(xml: string, ref: string, text: string, style: string) {
+  const pattern = new RegExp(`<x:c r="${ref}"[^>]*>(.*?)</x:c>`, 's')
+  return xml.replace(pattern, `<x:c r="${ref}" s="${style}" t="inlineStr"><is><t>${escapeXml(text)}</t></is></x:c>`)
+}
+
+function replaceRowValue(xml: string, row: number, col: string, value: string) {
+  const ref = `${col}${row}`
+  const pattern = new RegExp(`<x:c r="${ref}"[^>]*(?:/>|>.*?</x:c>)`, 's')
+  const style = getStyle(xml, ref)
+  const cell = value
+    ? `<x:c r="${ref}" s="${style}"><x:v>${value}</x:v></x:c>`
+    : `<x:c r="${ref}" s="${style}"/>`
+  return xml.replace(pattern, cell)
+}
+
+function getCellStart(xml: string, ref: string) {
+  const pattern = new RegExp(`<x:c r="${ref}"[^>]*`, 's')
+  return xml.match(pattern)?.[0]
+}
+
+function replaceInlineRowValue(xml: string, row: number, col: string, text: string) {
+  const ref = `${col}${row}`
+  const pattern = new RegExp(`<x:c r="${ref}"[^>]*(?:/>|>.*?</x:c>)`, 's')
+  const start = getCellStart(xml, ref)
+  if (!start) return xml
+  const cleanStart = start.replace(/ t="[^"]*"/g, '')
+  const value = text ? `<x:c r="${ref}" s="${getStyle(xml, ref)}" t="inlineStr"><is><t>${escapeXml(text)}</t></is></x:c>` : `${cleanStart}/>`
+  return xml.replace(pattern, value)
+}
+
+function getStyle(xml: string, ref: string) {
+  const start = getCellStart(xml, ref)
+  return start?.match(/s="(\d+)"/)?.[1] ?? '10'
+}
+
 function toExcelDateNumber(date: string) {
   const [y, m, d] = date.split('-').map(Number)
   return (Date.UTC(y, m - 1, d) - Date.UTC(1899, 11, 30)) / 86400000
 }
 
 function escapeXml(value: string) {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;')
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;')
 }

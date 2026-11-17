@@ -104,8 +104,12 @@ function Ledger({ st, today, open }: { st: State; today: string; open: (s: Sheet
       alert('회사 양식 파일을 선택해 주세요. 비공개 파일이어야 합니다.')
       return
     }
+    if (!st.settings.submitterName.trim()) {
+      alert('설정에서 제출자 이름을 먼저 입력해 주세요.')
+      return
+    }
     try {
-      await buildExportWorkbook(list, templateFile, `corp-card-${month}.xlsx`)
+      await buildExportWorkbook(list, templateFile, { month, submitterName: st.settings.submitterName, accountTitle: st.settings.accountTitle }, `corp-card-${month}.xlsx`)
     } catch (e) {
       alert(e instanceof Error ? e.message : '내보내기 중 문제가 발생했어요.')
     }
@@ -117,7 +121,7 @@ function Ledger({ st, today, open }: { st: State; today: string; open: (s: Sheet
       {list.length === 0 && <p className="empty">이 달에는 내역이 없어요.</p>}
       {list.map((e) => <EntryRow key={e.id} e={e} onClick={() => open({ k: 'entry', id: e.id })} />)}
       <div className="row split" style={{ marginTop: 12 }}>
-        <input ref={fileRef} type="file" accept=".xlsx,.xls" style={{ display: 'none' }} onChange={(e) => setTemplateFile(e.target.files?.[0] ?? null)} />
+        <input ref={fileRef} type="file" accept=".xlsx" style={{ display: 'none' }} onChange={(e) => setTemplateFile(e.target.files?.[0] ?? null)} />
         <button className="main soft" onClick={() => fileRef.current?.click()}>회사 양식 선택</button>
         <button className="main" onClick={exportTemplate} disabled={!templateFile}>내보내기</button>
       </div>
@@ -212,6 +216,9 @@ function Settings({ st, set, open }: { st: State; set: Set; open: (s: Sheet) => 
   return (
     <>
       <h1 className="month">설정</h1>
+      <h2>내보내기 정보</h2>
+      <label className="fld">제출자 이름<input type="text" defaultValue={s.submitterName} onBlur={(e) => patch({ submitterName: e.target.value.trim() })} /></label>
+      <label className="fld">계정과목<input type="text" defaultValue={s.accountTitle} onBlur={(e) => patch({ accountTitle: e.target.value.trim() || '복리후생비' })} /></label>
       <h2>한도와 영업일</h2>
       <label className="fld">월 한도(원)<input type="number" inputMode="numeric" defaultValue={s.limit} onBlur={(e) => patch({ limit: Number(e.target.value) || s.limit })} /></label>
       <label className="chk"><input type="checkbox" checked={s.skipHoliday} onChange={(e) => patch({ skipHoliday: e.target.checked })} /> 공휴일과 회사 휴일 제외</label>
@@ -228,6 +235,9 @@ function Settings({ st, set, open }: { st: State; set: Set; open: (s: Sheet) => 
       <label className="fld">음료로 볼 가맹점 키워드 (쉼표로 구분)<input type="text" defaultValue={s.drinkWords.join(', ')} onBlur={(e) => patch({ drinkWords: e.target.value.split(',').map((x) => x.trim()).filter(Boolean) })} /></label>
       <label className="fld">식대 기본 적요<input type="text" defaultValue={s.memos['식대']} onBlur={(e) => patch({ memos: { ...s.memos, 식대: e.target.value } })} /></label>
       <label className="fld">음료 기본 적요<input type="text" defaultValue={s.memos['음료']} onBlur={(e) => patch({ memos: { ...s.memos, 음료: e.target.value } })} /></label>
+      <h2>기타</h2>
+      <label className="fld">제출자 이름<input type="text" defaultValue={s.submitterName} onBlur={(e) => patch({ submitterName: e.target.value })} /></label>
+      <label className="fld">계정과목<input type="text" defaultValue={s.accountTitle} onBlur={(e) => patch({ accountTitle: e.target.value })} /></label>
     </>
   )
 }

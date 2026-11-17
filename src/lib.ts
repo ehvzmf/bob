@@ -4,13 +4,13 @@ import { COMPANY_HOLIDAYS } from './config/companyHolidays'
 export interface Entry { id: string; date: string; amount: number; merchant: string; item: string; memo: string; src: 'manual' | 'card'; reflected: boolean }
 export type LeaveKind = 'full' | 'am' | 'pm' | 'hours'
 export interface Leave { date: string; kind: LeaveKind; hours: number; useCard: boolean }
-export interface Settings { limit: number; skipHoliday: boolean; happyFriday: boolean; drinkMax: number; drinkWords: string[]; memos: Record<string, string>; extraHolidays: string[] }
+export interface Settings { limit: number; skipHoliday: boolean; happyFriday: boolean; drinkMax: number; drinkWords: string[]; memos: Record<string, string>; extraHolidays: string[]; submitterName: string; accountTitle: string }
 export interface CardBase { month: string; used: number; at: string }
 export interface State { entries: Entry[]; leaves: Leave[]; settings: Settings; card: CardBase | null; memory: Record<string, { item: string; memo: string }> }
 
 export const defaultState = (): State => ({
   entries: [], leaves: [], card: null, memory: {},
-  settings: { limit: 300000, skipHoliday: true, happyFriday: true, drinkMax: 7000, drinkWords: ['카페', '커피', 'coffee', 'cafe'], memos: { 식대: '식대', 음료: '음료' }, extraHolidays: [] },
+  settings: { limit: 300000, skipHoliday: true, happyFriday: true, drinkMax: 7000, drinkWords: ['카페', '커피', 'coffee', 'cafe'], memos: { 식대: '식대', 음료: '음료' }, extraHolidays: [], submitterName: '', accountTitle: '복리후생비' },
 })
 
 export const p2 = (n: number) => String(n).padStart(2, '0')

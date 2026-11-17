@@ -6,3 +6,4 @@ dist
 *.xls
 *.pdf
 samples/
+private/
