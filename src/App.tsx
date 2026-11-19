@@ -5,6 +5,8 @@ import { GUIDES } from './config/guides'
 import { pickMealSuggestion } from './config/recommendations'
 import { applyImport, classify, fromYmd, holidayName, md, offReason, p2, parseCardText, planImport, remainingDays, toYmd, uid, won, WEEK } from './lib'
 import type { Entry, Leave, LeaveKind, PlanRow, State } from './lib'
+import type { User } from 'firebase/auth'
+import { firebaseReady, isAllowedCompanyEmail, loadRemoteState, loginWithGoogle, logoutGoogle, observeAuth, saveRemoteState } from './firebase'
 
 type Tab = 'home' | 'ledger' | 'import' | 'settings'
 type Sheet = { k: 'entry'; id?: string } | { k: 'leave'; date: string } | { k: 'card' } | null
@@ -17,7 +19,39 @@ export default function App() {
   const [st, setSt] = useState<State>(load)
   const [tab, setTab] = useState<Tab>('home')
   const [sheet, setSheet] = useState<Sheet>(null)
+  const [user, setUser] = useState<User | null>(null)
+  const [authReady, setAuthReady] = useState(false)
+  const [remoteReady, setRemoteReady] = useState(false)
+
   useEffect(() => save(st), [st])
+  useEffect(() => observeAuth(async (nextUser) => {
+    if (nextUser && !isAllowedCompanyEmail(nextUser.email)) {
+      await logoutGoogle()
+      setUser(null)
+      setRemoteReady(false)
+      setAuthReady(true)
+      alert('회사 계정 이메일로만 로그인할 수 있어요.')
+      return
+    }
+    setUser(nextUser)
+    setAuthReady(true)
+    if (nextUser) {
+      setRemoteReady(false)
+      try {
+        const remote = await loadRemoteState(nextUser.uid)
+        if (remote) setSt(remote)
+      } finally {
+        setRemoteReady(true)
+      }
+    } else {
+      setRemoteReady(false)
+    }
+  }), [])
+  useEffect(() => {
+    if (!user || !remoteReady) return
+    saveRemoteState(user.uid, st).catch(() => undefined)
+  }, [st, user, remoteReady])
+
   const today = toYmd(new Date())
   const tabs: [Tab, string][] = [['home', '홈'], ['ledger', '내역'], ['import', '가져오기'], ['settings', '설정']]
   return (
@@ -26,7 +60,7 @@ export default function App() {
         {tab === 'home' && <Home st={st} today={today} open={setSheet} />}
         {tab === 'ledger' && <Ledger st={st} today={today} open={setSheet} />}
         {tab === 'import' && <Import st={st} set={setSt} />}
-        {tab === 'settings' && <Settings st={st} set={setSt} open={setSheet} />}
+        {tab === 'settings' && <Settings st={st} set={setSt} open={setSheet} user={user} authReady={authReady} />}
       </main>
       <nav>{tabs.map(([k, l]) => <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>)}</nav>
       {sheet && (
@@ -209,13 +243,18 @@ function Import({ st, set }: { st: State; set: Set }) {
   )
 }
 
-function Settings({ st, set, open }: { st: State; set: Set; open: (s: Sheet) => void }) {
+function Settings({ st, set, open, user, authReady }: { st: State; set: Set; open: (s: Sheet) => void; user: User | null; authReady: boolean }) {
   const s = st.settings
   const patch = (p: Partial<State['settings']>) => set((x) => ({ ...x, settings: { ...x.settings, ...p } }))
   const [hd, setHd] = useState('')
   return (
     <>
       <h1 className="month">설정</h1>
+      <h2>로그인과 동기화</h2>
+      {!firebaseReady && <p className="sub">Firebase 환경변수를 넣으면 구글 로그인과 기기 간 동기화를 사용할 수 있어요.</p>}
+      {firebaseReady && authReady && (user
+        ? <><p className="sub">로그인됨: {user.email}</p><button className="main soft" onClick={() => logoutGoogle().catch(() => alert('로그아웃에 실패했어요.'))}>로그아웃</button></>
+        : <button className="main" onClick={() => loginWithGoogle().catch((e) => alert(e instanceof Error ? e.message : '로그인에 실패했어요.'))}>구글로 로그인</button>)}
       <h2>내보내기 정보</h2>
       <label className="fld">제출자 이름<input type="text" defaultValue={s.submitterName} onBlur={(e) => patch({ submitterName: e.target.value.trim() })} /></label>
       <label className="fld">계정과목<input type="text" defaultValue={s.accountTitle} onBlur={(e) => patch({ accountTitle: e.target.value.trim() || '복리후생비' })} /></label>
@@ -238,6 +277,15 @@ function Settings({ st, set, open }: { st: State; set: Set; open: (s: Sheet) => 
       <h2>기타</h2>
       <label className="fld">제출자 이름<input type="text" defaultValue={s.submitterName} onBlur={(e) => patch({ submitterName: e.target.value })} /></label>
       <label className="fld">계정과목<input type="text" defaultValue={s.accountTitle} onBlur={(e) => patch({ accountTitle: e.target.value })} /></label>
+      <h2>계정</h2>
+      {user ? (
+        <>
+          <p className="sub">{user.email}으로 로그인 중</p>
+          <button className="main" onClick={() => logoutGoogle()}>로그아웃</button>
+        </>
+      ) : (
+        authReady && <button className="main" onClick={() => loginWithGoogle()}>구글 계정으로 로그인</button>
+      )}
     </>
   )
 }
