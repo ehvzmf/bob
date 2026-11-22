@@ -93,21 +93,14 @@ public/guides/                  안내 이미지(paste-guide.png, image-guide.pn
 - 창립기념일 등 회사 휴일 날짜.
 - 안내 이미지(스크린샷) 파일. 카드번호와 이름은 가려서 받는다.
 
-## 커밋 컨벤션
-- 모든 커밋 메시지는 아래 형식을 따른다: `gitmoji type: commit message`
-- 형식 예시: `✨ feat: add daily spend calculation` 또는 `🐛 fix: correct leave-day logic`
-- `gitmoji`는 작업 성격에 맞는 이모지를 앞에 붙이고, 뒤에는 `type`을 소문자로 적는다.
-- 권장 `type`: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `build`, `ci`, `perf`
-- 메시지는 한국어 또는 영어를 섞어 써도 되지만, 의미가 명확하고 명령형으로 짧게 작성한다.
-- 브랜치/이슈 번호가 있으면 끝에 `(#123)`처럼 붙여도 된다.
-- 예시 목록:
-  - `✨ feat: add card import preview`
-  - `🐛 fix: correct remaining days calculation`
-  - `📝 docs: add commit convention for agents`
-  - `🎨 style: update blue theme palette`
-  - `♻️ refactor: simplify storage abstraction`
-  - `✅ test: add date logic regression checks`
-  - `🔧 chore: add app metadata`
+## 커밋과 푸시 규칙
+- 커밋 형식은 `gitmoji type: commit message`를 따른다.
+- 의미 있는 작업은 완료 즉시 커밋한다.
+- 커밋 후 충돌이나 미검증 변경이 없으면 바로 `git push origin main`을 수행한다.
+- 사용자 요청이나 로컬 원격 차이가 있으면 먼저 `git fetch origin`으로 확인한다.
+- 원격 차이가 있으면 `git merge`로 정상 병합한다.
+- 금지: amend, force-push, rebase.
+- 푸시 거절 시 force push 없이 원격을 가져와 병합한다.
 
 ## 작업 규칙
 ```

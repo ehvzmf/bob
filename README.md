@@ -1,25 +1,43 @@
-# 법카 계산기 (1단계)
+# bob — 법인카드 계산기
 
-월 한도에서 영업일 기준으로 하루 사용 가능 금액을 계산하고, 카드 내역을 붙여넣어 가져오는 앱입니다.
+법인카드 월 한도와 영업일을 기준으로 오늘 쓸 수 있는 금액을 계산하고, 내역을 입력하거나 카드 텍스트로 가져와 제출용 사용내역서로 내보내는 모바일 우선 앱입니다.
 
 ## 실행
-1. Node.js 20 이상 (24 가능)
+
+1. Node.js 24 이상 권장
 2. `npm install`
-3. `npm run dev` → 터미널에 나오는 주소로 접속 (같은 Wi-Fi의 폰은 `Network` 주소로 접속)
+3. `npm run dev`
 
-## 직접 채워 넣을 것
-- 안내 이미지: `public/guides/paste-guide.png`, `public/guides/image-guide.png` (파일명 목록은 `src/config/guides.ts`)
-- 회사 휴일(창립기념일 등): `src/config/companyHolidays.ts`
-- 공휴일 데이터(2026~2027): `src/holidays.ts` (임시공휴일은 설정 화면에서 추가 가능)
+## 주요 상태
 
-## 구조
-- `src/lib.ts` 영업일 계산, 자동 분류, 카드 텍스트 파서, 가져오기 합치기 규칙
-- `src/storage.ts` 저장 계층 (지금은 브라우저 저장소, 나중에 Firestore로 교체)
-- `src/App.tsx` 화면 (홈, 내역, 가져오기, 설정, 입력 시트)
+- 완료: 예산 계산, 내역 관리, 휴일·쉬는 날 설정, 카드 텍스트 가져오기
+- 완료: 식사 추천과 추천 새로 고르기
+- 구현됨: 엑셀 양식 선택 후 제출 필드 채우기
+- 구현됨: Firebase Auth/Firestore 연동 기반과 localStorage 폴백
+- 진행 예정: 엑셀 실제 검증, 30행 초과 처리, OCR/PDF/엑셀 가져오기
 
-## 아직 없는 것
-- 양식 엑셀 내보내기 (양식 파일을 받은 뒤)
-- Firebase 로그인과 Firestore 저장
-- 이미지(OCR), PDF, 엑셀 가져오기 (메뉴는 준비 중으로 표시)
-- 공공데이터포털 공휴일 갱신 스크립트
-- 데이터는 이 브라우저에만 저장됩니다. 다른 기기와 공유되지 않아요.
+## Firebase
+
+- 실제 환경변수는 `.env.local`에 저장합니다.
+- 설정 항목은 `.env.example`을 참고합니다.
+- 상세 절차는 `docs/firebase-guide.md`를 확인합니다.
+- 앱의 데이터는 로그인 후 `users/{uid}/state/main`에 저장됩니다.
+
+## Firebase Hosting
+
+- 로컬 배포: `npm run deploy:hosting`
+- GitHub Actions: `main` 브랜치 푸시 시 Hosting 배포
+- 배포 설정은 `firebase.json`과 `.github/workflows/deploy.yml`에 있습니다.
+
+## 비공개 양식
+
+- 실제 회사 양식은 공개 저장소에 올리지 않습니다.
+- 로컬 템플릿은 `private/templates/`에 두고 Git에서 제외합니다.
+- 내보내기 방식과 남은 검증 항목은 `docs/export-template-guide.md`에 있습니다.
+
+## 문서
+
+- `CLAUDE.md`: 프로젝트 규칙과 작업 인수인계
+- `docs/roadmap.md`: 전체 로드맵과 남은 작업
+- `docs/firebase-guide.md`: Firebase 설정 절차
+- `docs/export-template-guide.md`: 엑셀 양식 내보내기 가이드
