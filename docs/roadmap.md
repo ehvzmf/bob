@@ -141,3 +141,12 @@ Firebase Hosting 설정:
 - `docs/export-template-guide.md`: 엑셀 양식 보안/내보내기 가이드
 - `docs/firebase-guide.md`: Firebase 설정과 인증/저장 구조
 - `docs/roadmap.md`: 전체 진행 순서와 남은 작업
+
+## 단계별 설정 체크리스트
+
+설정은 한 번에 여러 단계를 진행하지 말고 `docs/setup-checklist.md`의 체크리스트를 단계별로 확인한다.
+
+- 현재 순서: 웹 앱 등록 → `.env.local` 입력 → Google 로그인 활성화 → 승인 도메인 → Firestore 규칙 → 로컬 로그인 테스트 → Hosting → GitHub Actions
+
+Firebase 웹 앱 등록 화면에서는 `npm` 사용을 선택하면 된다.
+현재 프로젝트에는 Firebase SDK와 Firebase CLI가 이미 설치돼 있으므로 콘솔 안내의 `npm install firebase`는 다시 실행하지 않아도 된다.

@@ -61,6 +61,15 @@ service cloud.firestore {
 - 로그인 후에도 localStorage는 최신 로컬 복사본으로 유지
 - 다음 기기에서 로그인하면 동일 uid의 상태를 불러온다
 
+## 설정 순서
+
+한 번에 여러 단계를 진행하지 말고 `docs/setup-checklist.md`를 따라 완료한 단계만 체크한다.
+
+현재 단계: **Firebase 웹 앱 등록 후 `.env.local` 입력**
+
+웹 앱 등록 화면에서는 `npm` 설치 방식을 선택한다.
+Firebase SDK는 이미 설치돼 있으므로 현재 프로젝트에서 별도 `npm install firebase`는 다시 실행하지 않는다.
+
 ## 다음 단계
 - 템플릿 파일은 Firestore가 아니라 별도 비공개 Firebase Storage에 둔다.
 - Storage 보안 규칙은 로그인한 사용자 본인만 읽도록 제한한다.
