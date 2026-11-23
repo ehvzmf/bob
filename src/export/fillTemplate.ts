@@ -4,6 +4,7 @@ import type { Entry } from '../lib'
 export type ExportMeta = { month: string; submitterName: string; accountTitle: string }
 
 export async function buildExportWorkbook(entries: Entry[], file: File, meta: ExportMeta, filename = 'corp-card-export.xlsx') {
+  if (entries.length > 30) throw new Error('템플릿은 한 번에 30건까지만 채울 수 있어요. 해당 월 내역을 나눠 내보내세요.')
   const zip = await JSZip.loadAsync(await file.arrayBuffer())
   const sheet = zip.file('xl/worksheets/sheet1.xml')
   if (!sheet) throw new Error('템플릿 시트를 찾을 수 없어요.')
@@ -22,7 +23,7 @@ export async function buildExportWorkbook(entries: Entry[], file: File, meta: Ex
     const entry = sorted[rowNo - 5]
     xml = replaceRowValue(xml, rowNo, 'B', entry ? String(rowNo - 4) : '')
     xml = replaceRowValue(xml, rowNo, 'C', entry ? toExcelDateNumber(entry.date).toString() : '')
-    xml = replaceInlineRowValue(xml, rowNo, 'D', entry?.merchant || '직접 입력')
+    xml = replaceInlineRowValue(xml, rowNo, 'D', entry ? (entry.merchant || '직접 입력') : '')
     xml = replaceRowValue(xml, rowNo, 'E', entry ? String(entry.amount) : '')
     xml = replaceInlineRowValue(xml, rowNo, 'F', entry?.item || '')
     xml = replaceInlineRowValue(xml, rowNo, 'G', entry ? meta.accountTitle : '')
