@@ -8,6 +8,7 @@ import type { CardRow, Entry, Leave, LeaveKind, PlanRow, State } from './lib'
 import type { User } from 'firebase/auth'
 import { firebaseReady, isAllowedCompanyEmail, loadRemoteState, loginWithGoogle, logoutGoogle, observeAuth, saveRemoteState } from './firebase'
 import { parseExcelFile, parsePdfFile, parseImageFile } from './importFiles'
+import { loadTemplate, saveTemplate } from './templateStorage'
 
 type Tab = 'home' | 'ledger' | 'import' | 'settings'
 type Sheet = { k: 'entry'; id?: string } | { k: 'leave'; date: string } | { k: 'card' } | null
@@ -132,6 +133,7 @@ function Ledger({ st, today, open }: { st: State; today: string; open: (s: Sheet
   const [month, setMonth] = useState(today.slice(0, 7))
   const [templateFile, setTemplateFile] = useState<File | null>(null)
   const fileRef = useRef<HTMLInputElement | null>(null)
+  useEffect(() => { loadTemplate().then(setTemplateFile).catch(() => undefined) }, [])
   const shift = (n: number) => { const d = fromYmd(month + '-01'); d.setMonth(d.getMonth() + n); setMonth(toYmd(d).slice(0, 7)) }
   const list = st.entries.filter((e) => e.date.startsWith(month)).sort(byDate)
   const exportTemplate = async () => {
@@ -143,6 +145,11 @@ function Ledger({ st, today, open }: { st: State; today: string; open: (s: Sheet
       alert('설정에서 제출자 이름을 먼저 입력해 주세요.')
       return
     }
+    if (list.length > 30) {
+      alert('템플릿은 한 번에 30건까지만 내보낼 수 있어요.')
+      return
+    }
+    if (!window.confirm(`${month.replace('-', '년 ')}월 내역 ${list.length}건을 엑셀로 내보낼까요?`)) return
     try {
       await buildExportWorkbook(list, templateFile, { month, submitterName: st.settings.submitterName, accountTitle: st.settings.accountTitle }, `corp-card-${month}.xlsx`)
     } catch (e) {
@@ -156,8 +163,8 @@ function Ledger({ st, today, open }: { st: State; today: string; open: (s: Sheet
       {list.length === 0 && <p className="empty">이 달에는 내역이 없어요.</p>}
       {list.map((e) => <EntryRow key={e.id} e={e} onClick={() => open({ k: 'entry', id: e.id })} />)}
       <div className="row split" style={{ marginTop: 12 }}>
-        <input ref={fileRef} type="file" accept=".xlsx" style={{ display: 'none' }} onChange={(e) => setTemplateFile(e.target.files?.[0] ?? null)} />
-        <button className="main soft" onClick={() => fileRef.current?.click()}>회사 양식 선택</button>
+        <input ref={fileRef} type="file" accept=".xlsx" style={{ display: 'none' }} onChange={(e) => { const file = e.target.files?.[0] ?? null; setTemplateFile(file); if (file) saveTemplate(file).catch(() => undefined) }} />
+        <button className="main soft" onClick={() => fileRef.current?.click()}>{templateFile ? `양식: ${templateFile.name}` : '회사 양식 선택'}</button>
         <button className="main" onClick={exportTemplate} disabled={!templateFile}>내보내기</button>
       </div>
     </>
@@ -331,6 +338,10 @@ function Settings({ st, set, open, user, authReady }: { st: State; set: Set; ope
       ) : (
         authReady && <button className="main" onClick={() => loginWithGoogle()}>구글 계정으로 로그인</button>
       )}
+      <h2>연차 현황</h2>
+      <label className="fld">연차 총량<input type="number" inputMode="decimal" defaultValue={s.annualLeaveTotal} onBlur={(e) => patch({ annualLeaveTotal: Number(e.target.value) || 0 })} /></label>
+      <label className="fld">사용한 연차<input type="number" inputMode="decimal" defaultValue={s.annualLeaveUsed} onBlur={(e) => patch({ annualLeaveUsed: Number(e.target.value) || 0 })} /></label>
+      <p className="sub">잔여 연차: {Math.max(0, s.annualLeaveTotal - s.annualLeaveUsed).toFixed(1)}일</p>
     </>
   )
 }
