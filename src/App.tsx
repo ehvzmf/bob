@@ -4,9 +4,10 @@ import { load, save } from './storage'
 import { GUIDES } from './config/guides'
 import { pickMealSuggestion } from './config/recommendations'
 import { applyImport, classify, fromYmd, holidayName, md, offReason, p2, parseCardText, planImport, remainingDays, toYmd, uid, won, WEEK } from './lib'
-import type { Entry, Leave, LeaveKind, PlanRow, State } from './lib'
+import type { CardRow, Entry, Leave, LeaveKind, PlanRow, State } from './lib'
 import type { User } from 'firebase/auth'
 import { firebaseReady, isAllowedCompanyEmail, loadRemoteState, loginWithGoogle, logoutGoogle, observeAuth, saveRemoteState } from './firebase'
+import { parseExcelFile, parsePdfFile, parseImageFile } from './importFiles'
 
 type Tab = 'home' | 'ledger' | 'import' | 'settings'
 type Sheet = { k: 'entry'; id?: string } | { k: 'leave'; date: string } | { k: 'card' } | null
@@ -184,6 +185,43 @@ function Import({ st, set }: { st: State; set: Set }) {
   const [info, setInfo] = useState<string[]>([])
   const [undo, setUndo] = useState<Entry[] | null>(null)
   const [msg, setMsg] = useState('')
+  const fileRef = useRef<HTMLInputElement | null>(null)
+  const [fileKind, setFileKind] = useState<'excel' | 'pdf' | 'image'>('excel')
+
+  const openFile = (kind: 'excel' | 'pdf' | 'image') => {
+    setFileKind(kind)
+    setMsg('')
+    window.setTimeout(() => fileRef.current?.click(), 0)
+  }
+
+  const previewRows = (rows: CardRow[], label: string) => {
+    if (!rows.length) {
+      setInfo([`${label}에서 인식된 내역이 없어요. 캡처는 더 선명하게, 엑셀/PDF는 목록을 포함한 파일로 선택해 주세요.`])
+      setStep('preview')
+      return
+    }
+    const p = planImport(rows, st.entries)
+    setPlan(p.plan)
+    setMissing(p.missing)
+    setInfo([`${label}에서 ${rows.length}건을 인식했어요. 반영 전에 내역을 확인해 주세요.`])
+    setStep('preview')
+  }
+
+  const processFile = async (file: File | undefined) => {
+    if (!file) return
+    try {
+      setMsg('파일을 인식하고 있어요…')
+      const rows = fileKind === 'excel'
+        ? await parseExcelFile(file)
+        : fileKind === 'pdf'
+          ? await parsePdfFile(file)
+          : await parseImageFile(file)
+      previewRows(rows, fileKind === 'excel' ? '엑셀' : fileKind === 'pdf' ? 'PDF' : '이미지')
+      setMsg('')
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : '파일을 인식하지 못했어요.')
+    }
+  }
 
   const recognize = () => {
     const r = parseCardText(text)
@@ -215,7 +253,7 @@ function Import({ st, set }: { st: State; set: Set }) {
   )
   if (step === 'preview') return (
     <>
-      <button className="ghost" onClick={() => setStep('paste')}>뒤로</button>
+      <button className="ghost" onClick={() => setStep('choose')}>뒤로</button>
       <h1 className="month">가져오기 미리보기</h1>
       {info.map((t) => <p key={t} className="sub">{t}</p>)}
       {plan.map((p, i) => (
@@ -233,10 +271,17 @@ function Import({ st, set }: { st: State; set: Set }) {
   return (
     <>
       <h1 className="month">어떻게 가져올까요</h1>
+      <input
+        ref={fileRef}
+        type="file"
+        accept={fileKind === 'excel' ? '.xlsx,.xls' : fileKind === 'pdf' ? '.pdf' : 'image/*'}
+        style={{ display: 'none' }}
+        onChange={(e) => processFile(e.target.files?.[0])}
+      />
       <button className="opt on" onClick={() => { setMsg(''); setInfo([]); setStep('paste') }}><b>텍스트 붙여넣기</b><small>카드 앱 화면을 드래그해서 복사 · 가장 정확해요</small></button>
-      <button className="opt off" onClick={soon('이미지')}><b>이미지 <i>준비 중</i></b><small>캡처한 사진에서 글자를 인식해요</small></button>
-      <button className="opt off" onClick={soon('PDF')}><b>PDF <i>준비 중</i></b><small>웹페이지를 인쇄해서 만든 파일</small></button>
-      <button className="opt off" onClick={soon('엑셀')}><b>엑셀 <i>준비 중</i></b><small>카드사에서 내려받은 파일</small></button>
+      <button className="opt on" onClick={() => openFile('image')}><b>이미지</b><small>캡처한 사진에서 글자를 인식해요</small></button>
+      <button className="opt on" onClick={() => openFile('pdf')}><b>PDF</b><small>텍스트가 포함된 카드 내역 파일을 읽어요</small></button>
+      <button className="opt on" onClick={() => openFile('excel')}><b>엑셀</b><small>카드사 내보내기 파일을 날짜·가맹점·금액으로 읽어요</small></button>
       {msg && <p className="sub">{msg}</p>}
       {undo && <button className="main soft" onClick={() => { set((s) => ({ ...s, entries: undo })); setUndo(null); setMsg('되돌렸어요.') }}>방금 가져온 내역 되돌리기</button>}
     </>
