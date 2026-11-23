@@ -5,16 +5,58 @@
 - [x] Firebase 프로젝트 생성
 - [x] Firebase 웹 앱 등록
 - [x] `.env.local` 값 입력
-- [ ] Google 로그인 활성화
-- [ ] 승인 도메인 등록
-- [ ] Firestore Database 생성
-- [ ] Firestore 보안 규칙 적용
-- [ ] 로컬 로그인 테스트
+- [x] Google 로그인 활성화
+- [x] 로컬 승인 도메인 사용
+- [x] Firestore Database 생성
+- [x] Firestore 보안 규칙 적용
+- [x] 로컬 로그인 및 데이터 저장 테스트
 - [ ] Firebase Hosting 활성화
 - [ ] Firebase 프로젝트 연결
 - [ ] 첫 Hosting 배포
+- [ ] 배포 도메인을 승인 도메인에 등록
 - [ ] GitHub Secrets 등록
 - [ ] `main` 푸시 시 자동 배포 확인
+
+## 현재 다음 작업: Hosting 및 CI/CD
+
+### 1. Firebase 프로젝트 연결
+- 터미널에서 `npx firebase login`
+- `npx firebase use --add` 실행
+- 방금 만든 Firebase 프로젝트 선택
+- 프로젝트 별칭을 `default`로 사용
+
+### 2. Firebase Hosting 활성화
+- Firebase 콘솔에서 Hosting 페이지 열기
+- 시작하기 실행
+- 로컬 설정은 저장소의 `firebase.json`으로 유지
+- `dist/`를 Hosting 공개 폴더로 사용
+
+### 3. 첫 배포
+- `npm run build`
+- `npm run deploy:hosting`
+- 배포 주소 접속
+- 배포 주소에서 구글 로그인 테스트
+
+### 4. 배포 도메인 승인
+- Firebase 콘솔의 Authentication → Settings → Authorized domains
+- Firebase Hosting 배포 주소가 없으면 추가
+- 커스텀 도메인을 사용할 경우 해당 도메인도 추가
+
+### 5. GitHub Actions 자동 배포
+GitHub 저장소 Settings → Secrets and variables → Actions에 다음 값 등록:
+- `VITE_FIREBASE_API_KEY`
+- `VITE_FIREBASE_AUTH_DOMAIN`
+- `VITE_FIREBASE_PROJECT_ID`
+- `VITE_FIREBASE_STORAGE_BUCKET`
+- `VITE_FIREBASE_MESSAGING_SENDER_ID`
+- `VITE_FIREBASE_APP_ID`
+- `VITE_ALLOWED_EMAIL_DOMAIN`
+- `FIREBASE_SERVICE_ACCOUNT`
+
+이후:
+- `main` 브랜치에 작은 변경 또는 빈 커밋 푸시
+- GitHub Actions 실행 확인
+- 빌드 성공 후 Firebase Hosting 배포 확인
 
 ## 완료된 기능
 
@@ -26,7 +68,7 @@
 - [x] 식사 추천 새로 고르기
 - [x] 엑셀 내보내기 초안
 - [x] 제출자·계정과목·기간 필드 채우기 초안
-- [x] Firebase SDK와 Auth/Firestore 연동 초안
+- [x] Firebase SDK와 Auth/Firestore 연동
 - [x] 파란 계열 디자인과 앱 메타 이름 `bob`
 - [x] GitHub 및 Firebase Hosting 설정 초안
 
@@ -43,17 +85,6 @@
 - [ ] 연차 잔여 계산
 - [ ] 내보내기 확인 화면
 - [ ] 모바일 화면 최종 정리
-
-## 현재 다음 작업
-
-`Google 로그인 활성화`부터 진행한다.
-
-## 주요 문서
-
-- `CLAUDE.md`: 프로젝트 규칙과 작업 인수인계
-- `docs/firebase-guide.md`: Firebase 설정 참고 문서
-- `docs/export-template-guide.md`: 엑셀 양식 내보내기 가이드
-- `docs/roadmap.md`: 전체 진행 체크리스트
 
 ## Git 규칙
 

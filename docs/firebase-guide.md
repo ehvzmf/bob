@@ -1,4 +1,4 @@
-# Firebase 설정 가이드
+# Firebase 설정
 
 ## 목표
 - 구글 로그인
@@ -66,11 +66,11 @@ service cloud.firestore {
 - [x] Firebase 프로젝트 생성
 - [x] 웹 앱 등록
 - [x] 환경변수 입력
-- [ ] Google 로그인 활성화
-- [ ] 승인 도메인 등록
-- [ ] Firestore Database 생성
-- [ ] 보안 규칙 적용
-- [ ] 로컬 로그인 테스트
+- [x] Google 로그인 활성화
+- [x] 승인 도메인 등록
+- [x] Firestore Database 생성
+- [x] 보안 규칙 적용
+- [x] 로컬 로그인 테스트
 
 현재 프로젝트의 Firebase SDK와 Firebase CLI는 이미 설치돼 있다.
 별도 npm 설치는 필요 없다.
@@ -79,3 +79,29 @@ service cloud.firestore {
 - 템플릿 파일은 Firestore가 아니라 별도 비공개 Firebase Storage에 둔다.
 - Storage 보안 규칙은 로그인한 사용자 본인만 읽도록 제한한다.
 - Hosting 배포 후 도메인을 Authentication 승인 목록에 넣는다.
+
+# Firebase 설정 기록
+
+## 완료
+
+- Firebase 프로젝트 생성
+- 웹 앱 등록
+- `.env.local` 설정
+- Google 로그인 활성화
+- 로컬 승인 도메인 사용
+- Firestore Database 생성
+- 사용자별 읽기/쓰기 보안 규칙 적용
+- 로컬 로그인 및 데이터 저장 테스트
+
+## 최소 재구성 정보
+
+- 환경변수는 Firebase 프로젝트 설정의 웹 앱 설정값을 `.env.local`에 입력
+- 인증은 Authentication의 Google provider 활성화
+- 데이터는 `users/{uid}/state/main`에 저장
+- 보안 규칙은 로그인한 사용자의 본인 `uid` 문서만 허용
+- 배포 후 도메인은 Authentication의 Authorized domains에 추가
+
+## 공개 금지
+
+- `.env.local`은 커밋하지 않는다.
+- 회사 양식 `.xlsx`는 `public/`에 두지 않는다.
