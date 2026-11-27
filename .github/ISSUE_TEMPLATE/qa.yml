@@ -1,0 +1,29 @@
+name: QA 이슈
+description: 앱 QA에서 발견한 문제 또는 확인 항목
+labels:
+  - qa
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: 영역
+      options:
+        - 로그인
+        - Firestore
+        - OCR
+        - 엑셀 내보내기
+        - 추천
+        - 배포
+        - 기타
+  - type: textarea
+    id: expected
+    attributes:
+      label: 기대 동작
+  - type: textarea
+    id: actual
+    attributes:
+      label: 실제 동작
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 화면 또는 이미지 증거

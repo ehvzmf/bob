@@ -41,7 +41,8 @@ export default function App() {
       setRemoteReady(false)
       try {
         const remote = await loadRemoteState(nextUser.uid)
-        if (remote) setSt(remote)
+        if (remote) setSt({ ...remote, settings: { ...remote.settings, submitterName: remote.settings.submitterName || nextUser.displayName || '' } })
+        else setSt((s) => ({ ...s, settings: { ...s.settings, submitterName: s.settings.submitterName || nextUser.displayName || '' } }))
       } finally {
         setRemoteReady(true)
       }
@@ -91,6 +92,7 @@ function Home({ st, today, open }: { st: State; today: string; open: (s: Sheet) 
   const off = offReason(today, st.settings)
   const leaveAhead = st.leaves.filter((l) => l.date >= today && l.date.startsWith(month) && !l.useCard).length
   const [seed, setSeed] = useState(0)
+  const todaySpent = sum(st.entries.filter((e) => e.date === today && !e.reflected))
   const mealSuggestion = pickMealSuggestion(Math.max(per, 0), st.entries, seed)
   return (
     <>
@@ -98,7 +100,7 @@ function Home({ st, today, open }: { st: State; today: string; open: (s: Sheet) 
       <section className="hero">
         <p className="cap">오늘 쓸 수 있는 금액</p>
         <p className="big">{won(Math.max(per, 0))}</p>
-        <p className="sub">{left < 0 ? `한도를 ${won(-left)} 넘었어요` : `잔액 ${won(left)} ÷ 남은 영업일 ${days}일`}</p>
+        <p className="sub">{left < 0 ? `한도를 ${won(-left)} 넘었어요` : `잔액 ${won(left)} ÷ 남은 영업일 ${days}일`}{todaySpent ? ` · 오늘 입력 ${won(todaySpent)} 반영` : ''}</p>
         <div className="bar"><i style={{ width: pct + '%' }} /></div>
         <p className="sub">한도 {won(st.settings.limit)} 중 {won(used)} 사용{leaveAhead ? ` · 쉬는 날 ${leaveAhead}일 제외` : ''}</p>
       </section>
@@ -109,9 +111,9 @@ function Home({ st, today, open }: { st: State; today: string; open: (s: Sheet) 
       <button className="main" onClick={() => open({ k: 'entry' })}>+ 내역 입력</button>
       <h2>오늘의 식사 제안</h2>
       <section className="suggestion-card">
-        <div className="row split"><p className="cap">{mealSuggestion.tier}한 예산</p><button className="icon-btn" aria-label="다른 추천" onClick={() => setSeed((n) => n + 1)}>↻</button></div>
+        <div className="row split"><p className="cap">예산 상태 · {mealSuggestion.tier}</p><button className="icon-btn" aria-label="다른 추천" onClick={() => setSeed((n) => n + 1)}>↻</button></div>
         <p className="suggestion-msg">{mealSuggestion.message}</p>
-        <p className="sub">추천 메뉴: {mealSuggestion.menu}</p>
+        <p className="sub">추천 메뉴: {mealSuggestion.menu}{mealSuggestion.topCafe ? ` · 자주 가는 카페: ${mealSuggestion.topCafe}` : ''}</p>
       </section>
       <h2>최근 내역</h2>
       {recent.length === 0 && <p className="empty">아직 내역이 없어요. 첫 내역을 입력해보세요.</p>}
@@ -162,7 +164,7 @@ function Ledger({ st, today, open }: { st: State; today: string; open: (s: Sheet
       <p className="sub">{list.length}건 · 내역 합계 {won(sum(list))}</p>
       {list.length === 0 && <p className="empty">이 달에는 내역이 없어요.</p>}
       {list.map((e) => <EntryRow key={e.id} e={e} onClick={() => open({ k: 'entry', id: e.id })} />)}
-      <div className="row split" style={{ marginTop: 12 }}>
+      <div className="export-bar">
         <input ref={fileRef} type="file" accept=".xlsx" style={{ display: 'none' }} onChange={(e) => { const file = e.target.files?.[0] ?? null; setTemplateFile(file); if (file) saveTemplate(file).catch(() => undefined) }} />
         <button className="main soft" onClick={() => fileRef.current?.click()}>{templateFile ? `양식: ${templateFile.name}` : '회사 양식 선택'}</button>
         <button className="main" onClick={exportTemplate} disabled={!templateFile}>내보내기</button>
@@ -194,6 +196,7 @@ function Import({ st, set }: { st: State; set: Set }) {
   const [msg, setMsg] = useState('')
   const fileRef = useRef<HTMLInputElement | null>(null)
   const [fileKind, setFileKind] = useState<'excel' | 'pdf' | 'image'>('excel')
+  const [ocrProgress, setOcrProgress] = useState<number | null>(null)
 
   const openFile = (kind: 'excel' | 'pdf' | 'image') => {
     setFileKind(kind)
@@ -222,9 +225,10 @@ function Import({ st, set }: { st: State; set: Set }) {
         ? await parseExcelFile(file)
         : fileKind === 'pdf'
           ? await parsePdfFile(file)
-          : await parseImageFile(file)
+          : await parseImageFile(file, setOcrProgress)
       previewRows(rows, fileKind === 'excel' ? '엑셀' : fileKind === 'pdf' ? 'PDF' : '이미지')
       setMsg('')
+      setOcrProgress(null)
     } catch (e) {
       setMsg(e instanceof Error ? e.message : '파일을 인식하지 못했어요.')
     }
@@ -290,6 +294,7 @@ function Import({ st, set }: { st: State; set: Set }) {
       <button className="opt on" onClick={() => openFile('pdf')}><b>PDF</b><small>텍스트가 포함된 카드 내역 파일을 읽어요</small></button>
       <button className="opt on" onClick={() => openFile('excel')}><b>엑셀</b><small>카드사 내보내기 파일을 날짜·가맹점·금액으로 읽어요</small></button>
       {msg && <p className="sub">{msg}</p>}
+      {ocrProgress !== null && <p className="sub">이미지 인식 중 {ocrProgress}%</p>}
       {undo && <button className="main soft" onClick={() => { set((s) => ({ ...s, entries: undo })); setUndo(null); setMsg('되돌렸어요.') }}>방금 가져온 내역 되돌리기</button>}
     </>
   )

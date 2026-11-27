@@ -50,7 +50,7 @@ export async function saveRemoteState(uid: string, state: State) {
 }
 
 export function isAllowedCompanyEmail(email: string | null) {
-  const domain = (import.meta.env.VITE_ALLOWED_EMAIL_DOMAIN as string | undefined)?.trim().toLowerCase()
+  const domain = (import.meta.env.VITE_ALLOWED_EMAIL_DOMAIN as string | undefined)?.trim().toLowerCase() || 'shiftone.kr'
   if (!domain) return true
   return Boolean(email?.toLowerCase().endsWith(`@${domain}`))
 }

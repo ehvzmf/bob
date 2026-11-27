@@ -71,19 +71,57 @@ export async function parsePdfFile(file: File): Promise<CardRow[]> {
   return fromRows(lines)
 }
 
-export async function parseImageFile(file: File): Promise<CardRow[]> {
+export async function parseImageFile(file: File, onProgress?: (value: number) => void): Promise<CardRow[]> {
   const { recognize } = await import('tesseract.js')
-  const result = await recognize(file, 'kor+eng', { logger: () => undefined })
-  const lines = result.data.text.split(/\r?\n/).map((line) => [line])
+  const result = await recognize(file, 'kor+eng', {
+    logger: (event) => {
+      if (event.status === 'recognizing text' && typeof event.progress === 'number') onProgress?.(Math.round(event.progress * 100))
+    },
+  })
+
+  const text = result.data.text
+    .replace(/[｜丨]/g, '|')
+    .replace(/[０-９]/g, (ch) => String(ch.charCodeAt(0) - 0xff10))
+    .replace(/원원+/g, '원')
+
+  const lines = text.split(/\r?\n/).map((line) => [line])
   const parsed = fromRows(lines)
-  if (parsed.length) return parsed
-  const merchantAmountDate = /(.+?)\s+(\d{1,3}(?:[,\d]*)원)\s+(\d{4}[.]\d{2}[.]\d{2})/g
+  if (parsed.length) return deduplicateRows(parsed)
+
   const fallback: CardRow[] = []
-  let match: RegExpExecArray | null
-  while ((match = merchantAmountDate.exec(result.data.text))) {
-    const date = normalizeDate(match[3])
-    const amount = amountFrom(match[2])
-    if (date && amount !== null) fallback.push({ date, merchant: match[1].trim(), amount })
+  const datePattern = /(20\d{2})[.\-/년\s]*(\d{1,2})[.\-/월\s]*(\d{1,2})[일]?/g
+  const amountPattern = /(?:[-]?\d{1,3}(?:[,]\d{3})+|[-]?\d{4,})\s*원/g
+
+  for (const line of text.split(/\r?\n/)) {
+    const dateMatch = datePattern.exec(line)
+    const amountMatch = amountPattern.exec(line)
+    datePattern.lastIndex = 0
+    amountPattern.lastIndex = 0
+    if (!dateMatch || !amountMatch) continue
+
+    const date = `${dateMatch[1]}-${dateMatch[2].padStart(2, '0')}-${dateMatch[3].padStart(2, '0')}`
+    const amount = amountFrom(amountMatch[0])
+    if (amount === null) continue
+
+    const merchant = line
+      .replace(dateMatch[0], '')
+      .replace(amountMatch[0], '')
+      .replace(/승인|결제|가맹점|사용|카드/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+
+    fallback.push({ date, merchant: merchant || '직접 입력', amount })
   }
-  return fallback
+
+  return deduplicateRows(fallback)
+}
+
+function deduplicateRows(rows: CardRow[]) {
+  const seen = new Set<string>()
+  return rows.filter((row) => {
+    const key = `${row.date}|${row.amount}|${row.merchant}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
 }

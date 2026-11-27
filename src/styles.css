@@ -1,5 +1,5 @@
-:root{--bg:#f3f7fb;--card:#fff;--ink:#17324a;--mut:#5c758d;--line:#d7e4f5;--acc:#2d7ff9;--accbg:#eaf4ff;--warn:#d8653d;--on:#fff}
-@media (prefers-color-scheme:dark){:root{--bg:#0e1b2a;--card:#12263b;--ink:#edf6ff;--mut:#9ab4cc;--line:#23415e;--acc:#7bb8ff;--accbg:#143b66;--warn:#f29a72;--on:#0e1b2a}}
+:root{--bg:#f4f1ec;--card:#fffdf9;--ink:#38332e;--mut:#777067;--line:#ddd5c9;--acc:#8a7060;--accbg:#eee6dc;--warn:#a65d45;--on:#fffdf9}
+@media (prefers-color-scheme:dark){:root{--bg:#1d1a17;--card:#29241f;--ink:#eee9e2;--mut:#b1a79a;--line:#403830;--acc:#c2a995;--accbg:#3a3028;--warn:#d79a82;--on:#1d1a17}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;font-variant-numeric:tabular-nums;line-height:1.5}
 .app{max-width:480px;margin:0 auto;min-height:100vh;padding:max(16px,env(safe-area-inset-top)) 16px calc(84px + env(safe-area-inset-bottom))}
@@ -49,3 +49,4 @@ input,textarea{display:block;width:100%;margin-top:4px;padding:10px 12px;font:in
 .day.off{color:var(--mut);background:var(--bg)}.day:disabled{opacity:.4}
 .day.lv{background:var(--accbg);color:var(--acc);font-weight:600}.day i{position:absolute;bottom:4px;left:50%;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:var(--acc)}
 .suggestion-card{background:linear-gradient(180deg,var(--card),var(--accbg));border:1px solid var(--line);border-radius:16px;padding:18px 16px;margin:8px 0 12px}.suggestion-msg{font-size:20px;font-weight:700;letter-spacing:-.02em;line-height:1.3;margin:6px 0 8px;color:var(--ink)}.icon-btn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:1px solid var(--line);border-radius:50%;background:var(--card);color:var(--acc);font-size:18px;line-height:1;padding:0}.icon-btn:hover{background:var(--accbg)}
+.export-bar{position:fixed;left:0;right:0;bottom:calc(64px + env(safe-area-inset-bottom));display:flex;gap:8px;max-width:480px;margin:0 auto;padding:8px 16px;background:var(--card);border-top:1px solid var(--line);z-index:20}.export-bar .main{margin:0}.ledger-actions-space{height:72px}

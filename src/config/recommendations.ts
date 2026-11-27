@@ -85,12 +85,17 @@ function recentPatterns(entries: Entry[]) {
   const recent = [...entries].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30)
   const cafeCount = recent.filter((e) => /카페|커피|coffee|cafe/i.test(e.merchant) || e.item === '음료').length
   const heartyCount = recent.filter((e) => /덮밥|돈까스|제육|김밥|카레|브런치|파스타|정식|쌈밥/i.test(e.merchant) || e.item === '식대').length
-  return { recent, cafeCount, heartyCount }
+  const cafeNames = recent
+    .filter((e) => /카페|커피|coffee|cafe/i.test(e.merchant))
+    .map((e) => e.merchant.trim())
+    .filter(Boolean)
+  const topCafe = cafeNames.length ? [...new Set(cafeNames)].sort((a, b) => cafeNames.filter((x) => x === b).length - cafeNames.filter((x) => x === a).length)[0] : ''
+  return { recent, cafeCount, heartyCount, topCafe }
 }
 
 export function pickMealSuggestion(amount: number, entries: Entry[] = [], seed = 0) {
   const tier = resolveTier(amount)
-  const { cafeCount, heartyCount } = recentPatterns(entries)
+  const { cafeCount, heartyCount, topCafe } = recentPatterns(entries)
   const messagePool = [...tier.messagePool]
   const menuPool = [...tier.menuPool]
 
@@ -105,6 +110,16 @@ export function pickMealSuggestion(amount: number, entries: Entry[] = [], seed =
   if (amount >= 25000 && tier.id !== 'luxury') {
     messagePool.unshift('오늘은 한 끼를 제대로 즐길 수 있는 날이에요.')
   }
+  if (topCafe && tier.id !== 'tight') {
+    messagePool.unshift(`최근 자주 가신 ${topCafe}에서의 여운이 남아있네요. 가볍게 한 끼 어때요?`)
+    menuPool.unshift('샌드위치', '커피', '도시락')
+  }
+  if (heartyCount >= 2) {
+    messagePool.unshift('밥을 든든하게 먹었어요. 커피 한 잔이 생각나는 날이에요.')
+  }
+  if (topCafe) {
+    messagePool.push(`요즘 자주 가는 곳은 ${topCafe}예요. 오늘도 부담 없이 들러볼까요?`)
+  }
 
   const index = Math.abs((seed + Math.round(amount)) % messagePool.length)
   const menuIndex = Math.abs((seed + Math.round(amount * 3)) % menuPool.length)
@@ -115,5 +130,6 @@ export function pickMealSuggestion(amount: number, entries: Entry[] = [], seed =
     tier: tier.label,
     message: messagePool[index],
     menu: menuPool[menuIndex],
+    topCafe,
   }
 }
